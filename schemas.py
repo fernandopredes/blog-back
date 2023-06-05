@@ -8,8 +8,8 @@ class UserSchema(Schema):
     name = fields.Str(required=True, description="nome do usuário")
     password = fields.Str(required=True, load_only=True, description="password do usuário")
     email = fields.Email(required=True, description="e-mail do usuário")
-    ship_name = fields.Str(required=True, description="nome da embarcação do usuário")
-    
+    profile_pic = fields.Str(description="URL da imagem de avatar")
+
 
     class Meta:
         description = "Define como um novo usuário a ser inserido deve ser representado"

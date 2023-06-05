@@ -1,7 +1,9 @@
+from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt
+from flask_jwt_extended import create_access_token, jwt_required, jwt_required, get_jwt_identity
+from cloudinary.uploader import upload
 
 
 from db import db
@@ -30,7 +32,7 @@ class UserRegister(MethodView):
             name = user_data["name"],
             email = user_data["email"],
             password = pbkdf2_sha256.hash(user_data["password"]),
-            ship_name = user_data["ship_name"]
+            
         )
         db.session.add(user)
         db.session.commit()
@@ -71,3 +73,33 @@ class User(MethodView):
         """
         user = UserModel.query.get_or_404(user_id)
         return user
+
+@blp.route('/upload_pic', methods=['POST'])
+class UserPicUpload(MethodView):
+    @jwt_required()
+    @blp.response(200, description="Sucesso. Retorna uma mensagem confirmando que a foto do perfil foi carregada.")
+    def post(self):
+        """ Rota para carregar a foto do perfil do usuário.
+
+        Retorna uma mensagem confirmando que a foto do perfil foi carregada.
+
+        """
+        # Get the current user
+        current_user_id = get_jwt_identity()
+        current_user = UserModel.query.get(current_user_id)
+
+        if 'file' not in request.files:
+            abort(400, message="Nenhum arquivo carregado.")
+        file = request.files['file']
+
+        if file.filename == '':
+            abort(400, message="Nenhum arquivo detectado.")
+
+        try:
+            res = upload(file)
+            image_url = res['secure_url']
+            current_user.profile_pic = image_url  # save URL to profile_pic column
+            db.session.commit()  # commit changes to database
+            return {"message": "Profile picture uploaded successfully."}
+        except Exception as e:
+            abort(500, message=str(e))
