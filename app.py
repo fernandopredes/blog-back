@@ -9,15 +9,17 @@ from flask_cors import CORS
 
 from db import db
 import models
+import cloudinary
 
 from resources.user import blp as UserBlueprint
-""" from resources.dailyrecord import blp as DailyRecordBlueprint """
+from resources.post import blp as PostBlueprint
+
 
 def create_app(db_url=None):
     app = Flask(__name__)
     load_dotenv()
 
-    app.config["API_TITLE"] = "Ship Stock Sentry REST API"
+    app.config["API_TITLE"] = "IEC Blog REST API"
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
     app.config["OPENAPI_URL_PREFIX"] = "/"
@@ -48,7 +50,13 @@ def create_app(db_url=None):
     # Enable CORS
     CORS(app)
 
-    app.config["JWT_SECRET_KEY"] = "121055982679089208576533403122492505118"
+    cloudinary.config(
+    cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key = os.getenv('CLOUDINARY_API_KEY'),
+    api_secret = os.getenv('CLOUDINARY_API_SECRET')
+)
+
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
     jwt = JWTManager(app)
 
     # JWT configuration starts
@@ -107,6 +115,7 @@ def create_app(db_url=None):
         db.create_all()
 
     api.register_blueprint(UserBlueprint)
-    """ api.register_blueprint(DailyRecordBlueprint) """
+    api.register_blueprint(PostBlueprint)
+
 
     return app
