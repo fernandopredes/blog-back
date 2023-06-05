@@ -11,4 +11,4 @@ class UserModel(db.Model):
 
 
     # Relationship with PostModel
-    """ posts = db.relationship("PostModel", back_populates="user", lazy=True, cascade="all,delete") """
+    posts = db.relationship("PostModel", back_populates="user", lazy=True, cascade="all,delete")

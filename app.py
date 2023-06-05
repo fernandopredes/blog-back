@@ -12,6 +12,7 @@ import models
 import cloudinary
 
 from resources.user import blp as UserBlueprint
+from resources.post import blp as PostBlueprint
 
 
 def create_app(db_url=None):
@@ -114,6 +115,7 @@ def create_app(db_url=None):
         db.create_all()
 
     api.register_blueprint(UserBlueprint)
+    api.register_blueprint(PostBlueprint)
 
 
     return app
