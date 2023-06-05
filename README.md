@@ -1,4 +1,4 @@
-Blog API
+#Blog API
 
 This project is a RESTful API for a blogging platform, developed using Flask, Flask-RESTful, Flask-Smorest, SQLAlchemy, and Marshmallow. It provides a comprehensive set of endpoints for user management and blog post operations. In addition, it integrates with Cloudinary to support image uploading for profile pictures and blog posts.
 
