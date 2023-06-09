@@ -1,7 +1,7 @@
 from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from sqlalchemy.exc import SQLAlchemyError,IntegrityError
+from cloudinary.uploader import upload
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from db import db
@@ -20,23 +20,59 @@ class PostList(MethodView):
         post_schema = PostSchema(many=True)
         return post_schema.dump(posts)
 
+@blp.route('/create_post', methods=['POST'])
+class PostCreation(MethodView):
     @jwt_required()
-    @blp.arguments(PostSchema)
-    @blp.response(201, PostSchema, description="Success. Returns the created post.")
+    @blp.arguments(PostSchema)  # Validation of data
+    @blp.response(200, PostSchema, description="Success. Returns a message confirming the post has been created.")
     def post(self, post_data):
-        """Cria um novo post"""
-        user_id = get_jwt_identity()
-        post_data['user_id'] = user_id
+        """ Rota para criar um post.
 
-        post = PostModel(**post_data)
+        Retorna uma mensagem confirmando que o post foi criado.
+
+        """
+        # pega o usuário atual
+        current_user_id = get_jwt_identity()
+
+        # Extrai dados do post_data
+        title = post_data['title']
+        abstract = post_data['abstract']
+        text = post_data['text']
+
+        image_one_url = None
+        image_two_url = None
+
+        # Check da image_one
+        if 'image_one' in request.files and request.files['image_one'].filename != '':
+            image_one = request.files['image_one']
+            res_one = upload(image_one)
+            image_one_url = res_one['secure_url']
+
+        # Check da image_two
+        if 'image_two' in request.files and request.files['image_two'].filename != '':
+            image_two = request.files['image_two']
+            res_two = upload(image_two)
+            image_two_url = res_two['secure_url']
+
         try:
-            db.session.add(post)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            print(str(e))
-            abort(500, message="An error occurred while trying to create a Post.")
+            # Cria um novo post com as imagens
+            new_post = PostModel(
+                user_id=current_user_id,
+                title=title,
+                abstract=abstract,
+                text=text,
+                image_one=image_one_url,
+                image_two=image_two_url
+            )
 
-        return post
+            db.session.add(new_post)
+            db.session.commit()  # commit mudanças no database
+
+            return {"message": "Post created successfully."}
+
+        except Exception as e:
+            abort(500, message=str(e))
+
 
 @blp.route('/posts/<int:post_id>')
 class Post(MethodView):
