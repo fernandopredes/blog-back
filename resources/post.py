@@ -23,9 +23,8 @@ class PostList(MethodView):
 @blp.route('/create_post', methods=['POST'])
 class PostCreation(MethodView):
     @jwt_required()
-    @blp.arguments(PostSchema)  # Validation of data
-    @blp.response(200, PostSchema, description="Success. Returns a message confirming the post has been created.")
-    def post(self, post_data):
+    @blp.response(200, description="Success. Returns a message confirming the post has been created.")
+    def post(self):
         """ Rota para criar um post.
 
         Retorna uma mensagem confirmando que o post foi criado.
@@ -34,10 +33,14 @@ class PostCreation(MethodView):
         # pega o usuário atual
         current_user_id = get_jwt_identity()
 
-        # Extrai dados do post_data
-        title = post_data['title']
-        abstract = post_data['abstract']
-        text = post_data['text']
+        # Get the fields from request
+        title = request.form.get('title')
+        abstract = request.form.get('abstract')
+        text = request.form.get('text')
+
+        # Validate the text fields. Return error if not valid.
+        if not title or not abstract or not text:
+            abort(400, message="Invalid input. Please provide all required fields.")
 
         image_one_url = None
         image_two_url = None
@@ -84,21 +87,48 @@ class Post(MethodView):
         return post
 
     @jwt_required()
-    @blp.arguments(UpdatePostSchema)
     @blp.response(200, PostSchema, description="Success. Returns the updated post.")
-    def put(self, post_data, post_id):
+    def put(self, post_id):
         """Update de um post"""
-        post = PostModel.query.get(post_id)
-        if post:
-            for key, value in post_data.items():
-                setattr(post, key, value)
-        else:
-            post = PostModel(id=post_id, **post_data)
+        post = PostModel.query.get_or_404(post_id)
 
-        db.session.add(post)
-        db.session.commit()
+        # Get the text fields from request
+        title = request.form.get('title')
+        abstract = request.form.get('abstract')
+        text = request.form.get('text')
 
-        return post
+        # Validate the text fields. Return error if not valid.
+        if not title or not abstract or not text:
+            abort(400, message="Invalid input. Please provide all required fields.")
+
+        image_one_url = post.image_one
+        image_two_url = post.image_two
+
+        # Check da image_one
+        if 'image_one' in request.files and request.files['image_one'].filename != '':
+            image_one = request.files['image_one']
+            res_one = upload(image_one)
+            image_one_url = res_one['secure_url']
+
+        # Check da image_two
+        if 'image_two' in request.files and request.files['image_two'].filename != '':
+            image_two = request.files['image_two']
+            res_two = upload(image_two)
+            image_two_url = res_two['secure_url']
+
+        try:
+            post.title = title
+            post.abstract = abstract
+            post.text = text
+            post.image_one = image_one_url
+            post.image_two = image_two_url
+
+            db.session.commit()  # commit mudanças no database
+
+            return post
+
+        except Exception as e:
+            abort(500, message=str(e))
 
     @jwt_required()
     @blp.response(200, DeletePostSchema, description="Success. Returns a success message and the deleted post.")
